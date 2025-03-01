@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="wechat-enable-text-zoom-em" content="true">
+    <title>单词接龙</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 15px;
+            text-align: center;
+            box-sizing: border-box;
+            background-color: #f8f9fa;
+        }
+        #message {
+            margin: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #animation {
+            height: 3px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        #animation.loading-animation {
+            background: linear-gradient(90deg, #4CAF50 0%, #45a049 50%, #4CAF50 100%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        #animation.correct-animation {
+            background-color: #4CAF50;
+            animation: flash 1s;
+        }
+        #animation.incorrect-animation {
+            background-color: #f44336;
+            animation: flash 1s;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .game-container {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 10px auto;
+            max-width: 600px;
+        }
+        .current-word {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        .input-container {
+            margin: 20px 0;
+        }
+        input[type="text"] {
+            padding: 12px;
+            font-size: 16px;
+            width: calc(100% - 24px);
+            max-width: 300px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 0 auto 10px auto;
+            display: block;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            min-width: 100px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .score {
+            font-size: 18px;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        .word-list {
+            margin-top: 30px;
+            text-align: left;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .correct {
+            color: #4CAF50;
+        }
+        @keyframes loading {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes correct {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes incorrect {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+        }
+        .loading-animation {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: loading 1s linear infinite;
+        }
+        .correct-animation {
+            animation: correct 0.5s ease;
+        }
+        .incorrect-animation {
+            animation: incorrect 0.5s ease;
+        }
+        #message {
+            margin: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>单词接龙</h1>
+    <div class="game-container">
+        <div class="current-word">
+            当前单词: <span id="current-word">dog</span>
+        </div>
+        <div class="input-container">
+            <input type="text" id="word-input" placeholder="输入你的单词">
+            <button id="submit-btn">提交</button>
+            <button id="hint-btn">获取提示</button>
+            <button id="restart-btn">重新开始</button>
+            <button id="exit-btn">退出</button>
+        </div>
+        <div id="animation"></div>
+        <div id="message"></div>
+        <div class="score">
+            得分: <span id="score">0</span>
+        </div>
+        <div class="word-list">
+            <h3>已输入的正确单词:</h3>
+            <ul id="correct-words-list"></ul>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import WordChainGame from './js/WordChainGame.js';
+        document.addEventListener('DOMContentLoaded', () => {
+            window.game = new WordChainGame();
+        });
+    </script>
+</body>
+</html>
