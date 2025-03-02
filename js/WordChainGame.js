@@ -1,3 +1,5 @@
+import sound from './sound.js';
+
 class WordChainGame {
     constructor() {
         this.words = [];
@@ -11,9 +13,26 @@ class WordChainGame {
         this.isGameStarted = false;
         this.isPaused = false;
         
-        this.initializeElements();
-        this.bindEvents();
-        this.loadWordsFromAPI();
+        // 初始化事件处理函数
+        this.submitHandler = this.submitHandler.bind(this);
+        this.hintHandler = this.hintHandler.bind(this);
+        this.startHandler = this.startHandler.bind(this);
+        this.pauseHandler = this.pauseHandler.bind(this);
+        this.exitHandler = this.exitHandler.bind(this);
+        this.keyboardHandler = this.keyboardHandler.bind(this);
+        
+        // 确保DOM加载完成后再初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.initializeElements();
+                this.bindEvents();
+                this.loadWordsFromAPI();
+            });
+        } else {
+            this.initializeElements();
+            this.bindEvents();
+            this.loadWordsFromAPI();
+        }
     }
     
     async loadWordsFromAPI() {
@@ -29,32 +48,20 @@ class WordChainGame {
             // 如果没有缓存，直接使用本地词库
             await this.loadBackupWordList();
 
-            // 在后台异步更新在线词库
-            this.updateOnlineWords();
+            // 不再默认尝试更新在线词库，避免在中国境内访问受限
+            // 用户可以手动触发更新在线词库的功能（如果需要添加此功能）
         } catch (error) {
             console.error('加载词库失败:', error);
             this.showMessage('词库加载失败，请刷新页面重试', 'incorrect');
         }
     }
 
+    // 移除在线更新词库的功能，完全依赖本地词库
+    // 如果需要扩充词库，可以直接修改words.js文件
     async updateOnlineWords() {
-        try {
-            const response = await axios.get('https://api.datamuse.com/words?max=1000&md=d');
-            if (response.data && response.data.length > 0) {
-                const onlineWords = response.data
-                    .filter(item => item.defs && item.defs.length > 0)
-                    .map(item => item.word);
-                
-                if (onlineWords.length > 0) {
-                    // 合并在线词库和本地词库
-                    this.words = [...new Set([...this.words, ...onlineWords])];
-                    // 缓存到localStorage
-                    localStorage.setItem('wordChainGameWords', JSON.stringify(this.words));
-                }
-            }
-        } catch (error) {
-            console.error('更新在线词库失败:', error);
-        }
+        // 此功能已禁用，以提高在中国境内的访问性能
+        console.log('在线词库更新功能已禁用，使用本地词库');
+        return;
     }
     
     async loadBackupWordList() {
@@ -94,10 +101,61 @@ class WordChainGame {
         this.totalTimerDisplay.textContent = this.totalTimeLeft;
         this.showMessage('点击开始按钮开始游戏', 'loading');
     }
+    submitHandler(e) {
+        console.log('提交按钮被点击');
+        e.preventDefault();
+        this.submitWord();
+    }
 
+    hintHandler(e) {
+        console.log('提示按钮被点击');
+        e.preventDefault();
+        this.getHint();
+    }
+
+    startHandler(e) {
+        console.log('开始按钮被点击');
+        e.preventDefault();
+        this.toggleStart();
+    }
+
+    pauseHandler(e) {
+        console.log('暂停按钮被点击');
+        e.preventDefault();
+        this.togglePause();
+    }
+
+    exitHandler(e) {
+        console.log('退出按钮被点击');
+        e.preventDefault();
+        this.exit();
+    }
+
+    keyboardHandler(e) {
+        // 回车键提交
+        if (e.key === 'Enter' && this.isGameStarted && !this.isPaused) {
+            console.log('回车键被按下');
+            e.preventDefault();
+            this.submitWord();
+        }
+        // 空格键暂停/继续
+        if (e.key === ' ' && this.isGameStarted && !this.wordInput.value.trim()) {
+            console.log('空格键被按下');
+            e.preventDefault();
+            this.togglePause();
+        }
+    }
+    
     bindEvents() {
         // 添加调试信息
         console.log('正在绑定事件...');
+        
+        // 检查按钮元素是否存在
+        if (!this.submitBtn || !this.hintBtn || !this.startBtn || !this.pauseBtn || !this.exitBtn) {
+            console.error('按钮元素不存在，无法绑定事件');
+            return;
+        }
+        
         console.log('按钮状态:', {
             submit: this.submitBtn,
             hint: this.hintBtn,
@@ -105,73 +163,23 @@ class WordChainGame {
             pause: this.pauseBtn,
             exit: this.exitBtn
         });
-
-        // 使用具名函数来绑定事件，便于调试
-        const submitHandler = (e) => {
-            console.log('提交按钮被点击');
-            e.preventDefault();
-            this.submitWord();
-        };
-
-        const hintHandler = (e) => {
-            console.log('提示按钮被点击');
-            e.preventDefault();
-            this.getHint();
-        };
-
-        const startHandler = (e) => {
-            console.log('开始按钮被点击');
-            e.preventDefault();
-            this.toggleStart();
-        };
-
-        const pauseHandler = (e) => {
-            console.log('暂停按钮被点击');
-            e.preventDefault();
-            this.togglePause();
-        };
-
-        const exitHandler = (e) => {
-            console.log('退出按钮被点击');
-            e.preventDefault();
-            this.exit();
-        };
-
+    
         // 移除可能存在的旧事件监听器
-        this.submitBtn.removeEventListener('click', submitHandler);
-        this.hintBtn.removeEventListener('click', hintHandler);
-        this.startBtn.removeEventListener('click', startHandler);
-        this.pauseBtn.removeEventListener('click', pauseHandler);
-        this.exitBtn.removeEventListener('click', exitHandler);
-
+        this.submitBtn.removeEventListener('click', this.submitHandler);
+        this.hintBtn.removeEventListener('click', this.hintHandler);
+        this.startBtn.removeEventListener('click', this.startHandler);
+        this.pauseBtn.removeEventListener('click', this.pauseHandler);
+        this.exitBtn.removeEventListener('click', this.exitHandler);
+        document.removeEventListener('keydown', this.keyboardHandler);
+    
         // 重新绑定事件监听器
-        this.submitBtn.addEventListener('click', submitHandler);
-        this.hintBtn.addEventListener('click', hintHandler);
-        this.startBtn.addEventListener('click', startHandler);
-        this.pauseBtn.addEventListener('click', pauseHandler);
-        this.exitBtn.addEventListener('click', exitHandler);
-        
-        // 全局键盘事件处理
-        const keyboardHandler = (e) => {
-            // 回车键提交
-            if (e.key === 'Enter' && this.isGameStarted && !this.isPaused) {
-                console.log('回车键被按下');
-                e.preventDefault();
-                this.submitWord();
-            }
-            // 空格键暂停/继续
-            if (e.key === ' ' && this.isGameStarted && !this.wordInput.value.trim()) {
-                console.log('空格键被按下');
-                e.preventDefault();
-                this.togglePause();
-            }
-        };
-
-        // 移除旧的事件监听器
-        document.removeEventListener('keydown', keyboardHandler);
-        // 添加新的事件监听器到document级别
-        document.addEventListener('keydown', keyboardHandler);
-
+        this.submitBtn.addEventListener('click', this.submitHandler);
+        this.hintBtn.addEventListener('click', this.hintHandler);
+        this.startBtn.addEventListener('click', this.startHandler);
+        this.pauseBtn.addEventListener('click', this.pauseHandler);
+        this.exitBtn.addEventListener('click', this.exitHandler);
+        document.addEventListener('keydown', this.keyboardHandler);
+    
         console.log('事件绑定完成');
     }
     
@@ -179,6 +187,7 @@ class WordChainGame {
         // 检查游戏状态，如果游戏未开始或已暂停，则不处理提交
         if (!this.isGameStarted || this.isPaused) {
             this.showMessage('游戏未开始或已暂停', 'incorrect');
+            sound.wrong.play();
             return;
         }
         
@@ -210,45 +219,28 @@ class WordChainGame {
             return;
         }
         
-        // 先检查本地词库
+        // 检查本地词库
         if (this.words.includes(word)) {
             this.acceptWord(word);
             return;
         }
         
-        // 如果本地词库没有，尝试在线验证单词
-        try {
-            this.showMessage('正在验证单词...', 'loading');
-            // 使用更精确的查询参数：sp=完全匹配 + md=d获取定义
-            const response = await axios.get(`https://api.datamuse.com/words?sp=${word}&md=d&max=1&exact=1`);
-            
-            if (response.data && response.data.length > 0 && 
-                response.data[0].word === word && 
-                response.data[0].defs && 
-                response.data[0].defs.length > 0) {
-                // 如果API确认单词存在且有词典定义，添加到本地词库并接受
-                this.words.push(word);
-                this.acceptWord(word);
-            } else {
-                // 尝试使用备用API进行二次验证
-                try {
-                    const backupResponse = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-                    if (backupResponse.data && backupResponse.data.length > 0) {
-                        // 如果备用API确认单词存在，添加到本地词库并接受
-                        this.words.push(word);
-                        this.acceptWord(word);
-                    } else {
-                        this.showMessage('请输入有效的英文单词！', 'incorrect');
-                    }
-                } catch (backupError) {
-                    // 如果备用API也失败，则认为单词无效
-                    this.showMessage('请输入有效的英文单词！', 'incorrect');
-                }
+        // 如果单词不在本地词库中，但符合基本规则，也接受它
+        // 这样可以避免依赖国外API，提高游戏在中国境内的可用性
+        if (word.length >= 2 && /^[a-z]+$/.test(word)) {
+            // 将新单词添加到本地词库
+            this.words.push(word);
+            // 更新本地存储
+            try {
+                localStorage.setItem('wordChainGameWords', JSON.stringify(this.words));
+            } catch (e) {
+                console.error('保存词库到本地存储失败:', e);
             }
-        } catch (error) {
-            console.error('验证单词失败:', error);
-            this.showMessage('验证单词失败，请重试！', 'incorrect');
+            this.acceptWord(word);
+            return;
         }
+        
+        this.showMessage('请输入有效的英文单词！', 'incorrect');
     }
     
     acceptWord(word) {
@@ -264,53 +256,20 @@ class WordChainGame {
     async getHint() {
         const lastLetter = this.currentWord[this.currentWord.length - 1];
         
-        try {
-            // 先尝试从在线API获取以特定字母开头的单词，并且要求有定义
-            this.showMessage('正在获取提示...', 'loading');
-            const response = await axios.get(`https://api.datamuse.com/words?sp=${lastLetter}*&md=d&max=30`);
-            
-            if (response.data && response.data.length > 0) {
-                // 过滤出有定义且未使用过的单词
-                const apiWords = response.data
-                    .filter(item => item.defs && item.defs.length > 0)
-                    .map(item => item.word);
-                const possibleWords = apiWords.filter(word => !this.usedWords.includes(word));
-                
-                if (possibleWords.length > 0) {
-                    // 随机选择一个提示词，增加游戏趣味性
-                    const randomIndex = Math.floor(Math.random() * Math.min(3, possibleWords.length));
-                    this.showMessage(`提示：可以使用 ${possibleWords[randomIndex]} 等单词`, 'correct');
-                    return;
-                }
-            }
-            
-            // 如果API没有返回合适的单词，使用本地词库
-            const possibleWords = this.words.filter(word => 
-                word[0] === lastLetter && !this.usedWords.includes(word)
-            );
+        // 直接使用本地词库提供提示，不再依赖国外API
+        this.showMessage('正在获取提示...', 'loading');
+        
+        // 从本地词库中筛选出符合条件的单词
+        const possibleWords = this.words.filter(word => 
+            word[0] === lastLetter && !this.usedWords.includes(word)
+        );
 
-            if (possibleWords.length > 0) {
-                // 随机选择一个提示词
-                const randomIndex = Math.floor(Math.random() * Math.min(3, possibleWords.length));
-                this.showMessage(`提示：可以使用 ${possibleWords[randomIndex]} 等单词`, 'correct');
-            } else {
-                this.showMessage('没有更多可用的单词了！', 'incorrect');
-            }
-        } catch (error) {
-            console.error('获取提示失败:', error);
-            
-            // 如果API请求失败，回退到本地词库
-            const possibleWords = this.words.filter(word => 
-                word[0] === lastLetter && !this.usedWords.includes(word)
-            );
-
-            if (possibleWords.length > 0) {
-                // 随机选择一个提示词
-                const randomIndex = Math.floor(Math.random() * Math.min(3, possibleWords.length));
-                this.showMessage(`提示：可以使用 ${possibleWords[randomIndex]} 等单词`, 'correct');
-            } else {
-                this.showMessage('没有更多可用的单词了！', 'incorrect');
-            }
+        if (possibleWords.length > 0) {
+            // 随机选择一个提示词
+            const randomIndex = Math.floor(Math.random() * Math.min(3, possibleWords.length));
+            this.showMessage(`提示：可以使用 ${possibleWords[randomIndex]} 等单词`, 'correct');
+        } else {
+            this.showMessage('没有更多可用的单词了！', 'incorrect');
         }
     }
 
@@ -348,6 +307,7 @@ class WordChainGame {
                 this.pauseBtn.textContent = '暂停';
                 this.startTimer();
                 this.startTotalTimer();
+                this.wordInput.focus();
             }
         }
     }
@@ -374,6 +334,7 @@ class WordChainGame {
             this.showMessage('游戏继续', 'correct');
             this.startTimer();
             this.startTotalTimer();
+            this.wordInput.focus();
         }
     }
 
