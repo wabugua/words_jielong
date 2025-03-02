@@ -18,28 +18,42 @@ class WordChainGame {
     
     async loadWordsFromAPI() {
         try {
-            this.showMessage('正在加载在线词库...', 'loading');
-            // 使用免费的在线词典API，增加参数获取更多有效单词
+            // 首先尝试从localStorage加载缓存的词库
+            const cachedWords = localStorage.getItem('wordChainGameWords');
+            if (cachedWords) {
+                this.words = JSON.parse(cachedWords);
+                this.showMessage(`从缓存加载词库成功！共加载 ${this.words.length} 个单词`, 'correct');
+                return;
+            }
+
+            // 如果没有缓存，直接使用本地词库
+            await this.loadBackupWordList();
+
+            // 在后台异步更新在线词库
+            this.updateOnlineWords();
+        } catch (error) {
+            console.error('加载词库失败:', error);
+            this.showMessage('词库加载失败，请刷新页面重试', 'incorrect');
+        }
+    }
+
+    async updateOnlineWords() {
+        try {
             const response = await axios.get('https://api.datamuse.com/words?max=1000&md=d');
             if (response.data && response.data.length > 0) {
-                // 提取单词列表，只保留有定义的单词
-                this.words = response.data
+                const onlineWords = response.data
                     .filter(item => item.defs && item.defs.length > 0)
                     .map(item => item.word);
                 
-                if (this.words.length > 0) {
-                    this.showMessage(`在线词库加载成功！共加载 ${this.words.length} 个单词`, 'correct');
-                } else {
-                    throw new Error('有效单词数量为0');
+                if (onlineWords.length > 0) {
+                    // 合并在线词库和本地词库
+                    this.words = [...new Set([...this.words, ...onlineWords])];
+                    // 缓存到localStorage
+                    localStorage.setItem('wordChainGameWords', JSON.stringify(this.words));
                 }
-            } else {
-                throw new Error('API返回数据为空');
             }
         } catch (error) {
-            console.error('加载在线词库失败:', error);
-            this.showMessage('加载在线词库失败，使用备用词库', 'incorrect');
-            // 加载失败时使用本地备用词库
-            this.loadBackupWordList();
+            console.error('更新在线词库失败:', error);
         }
     }
     
